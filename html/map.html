@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+  <meta charset="utf-8">
+  <title>Violence Map</title>
+    <style type="text/css">
+        html { height: 100% }
+        body { height: 100%; margin: 0; padding: 0 }
+        #map_canvas { height: 100% }
+    </style>
+</head>
+<body>
+<div id="map_canvas" style="width: 100%; height: 100%;"></div>
+<script type="text/javascript"
+        src="https://maps.googleapis.com/maps/api/js?sensor=false&language=zh-HK"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        var mapOptions = {
+            zoom: 13,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        var map = new google.maps.Map(document.getElementById("map_canvas"),
+                mapOptions);
+
+        var bounds = new google.maps.LatLngBounds();
+
+        var spreadsheet = 'https://spreadsheets.google.com/feeds/list/1i3hrHF12t_iCO91F5gENmxQOwMNELJj2RyxXWIG5Fbs/od6/public/values?alt=json';
+
+        var columns = ['日期', '時間', '地點', '受害人有否報案', '受害人佔中者有否使用暴力',
+            {
+                name: '受害者附近是否有警員在場有多少名警察在場',
+                label: '受害者附近有多少名警察在場'
+            }, {
+                name: '詳細描述所受到的暴力和威脅施暴者的特徵人數如是警員請加上編號',
+                label: '所受到的暴力和威脅, 施暴者的特徵'
+            },
+            {
+                name: '如果是受到反佔中者攻擊描述警方反應',
+                label: '如果是受到反佔中者攻擊的警方反應'
+            }, {
+                name: '請提供有關視頻錄像',
+                label: '有關視頻錄像'
+            }];
+        var renderContent = function(entry){
+            var content = '';
+            $.each(columns, function(idx,column){
+                var columnName = column;
+                var label = column;
+                if(typeof column === 'object'){
+                    columnName = column.name;
+                    label = column.label;
+                }
+                content += label + ': ' + entry['gsx$' + columnName].$t + '<br/>';
+            });
+            return content;
+        };
+
+        var infowindow = new google.maps.InfoWindow({
+            content: ''
+        });
+        $.get(spreadsheet, function (data) {
+            $.each(data.feed.entry, function (idx, val) {
+                var latlng = new google.maps.LatLng(val.gsx$latitude.$t,val.gsx$longitude.$t);
+                var marker = new google.maps.Marker({
+                    map: map,
+                    position: latlng
+                });
+
+                bounds.extend(marker.position);
+                google.maps.event.addListener(marker, 'mouseover', function() {
+                    infowindow.content = renderContent(val);
+                    infowindow.open(map,marker);
+                });
+            });
+            map.fitBounds(bounds);
+        });
+
+    });
+</script>
+</body>
+</html>
